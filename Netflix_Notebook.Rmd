@@ -1,0 +1,341 @@
+---
+title: "R Notebook"
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+## 1.1 Load the dataset from the given files into two dataframes. Rename columns to remove spaces if exist in the column names (Hint: use str_replace_all to do this automatically for all columns). Make sure date values are in the correct type. Show a summary of each dataframe (including statistics of each column).
+
+```{r}
+# Load necessary packages
+library(tidyverse)
+library(lubridate)
+
+# Load Show.csv into a dataframe
+shows_df <- read.csv("show.csv")
+
+# Rename columns to remove spaces
+colnames(shows_df) <- str_replace_all(colnames(shows_df), " ", "")
+
+# Convert date columns to correct type
+shows_df$Date.Added <- mdy(shows_df$Date.Added)
+
+# Check for missing values and replace with appropriate technique
+summary(shows_df)
+
+```
+
+```{r}
+# Load MaturityType.csv into a dataframe
+maturity_df <- read.csv("MaturityType.csv")
+
+# Rename columns to remove spaces
+colnames(maturity_df) <- str_replace_all(colnames(maturity_df), " ", "")
+
+# Check for missing values and replace with appropriate technique
+summary(maturity_df)
+
+```
+
+## 1.2 Write R code to investigate whether there are duplicate rows in the show dataframe; if yes, how many of them, display them and then remove them (Hint: check the duplicated() function). Display the number of rows before and after removal. Modify the IMDB score column to remove the "/10" and change its type to numeric
+
+```{r}
+# Check for duplicate rows and display them
+duplicated_rows <- shows_df[duplicated(shows_df), ]
+print(paste("Number of duplicate rows: ", nrow(duplicated_rows)))
+print("Duplicate rows:")
+print(duplicated_rows)
+
+# Remove duplicate rows
+shows_df <- shows_df[!duplicated(shows_df), ]
+
+# Display number of rows before and after removal
+print(paste("Number of rows before removal: ", nrow(shows_df) + nrow(duplicated_rows)))
+print(paste("Number of rows after removal: ", nrow(shows_df)))
+
+# Modify Imdb.Score column to remove "/10" and change type to numeric
+shows_df$Imdb.Score <- as.numeric(gsub("/10", "", shows_df$Imdb.Score))
+
+# Check data types of columns
+str(shows_df)
+```
+
+## 1.3 Choose a production country and a year of your interest and write the R code to display the TV shows that this country produced as "TV Show for Mature Audiences" in this year. Your result should not be empty.
+
+```{r}
+# Select production country and year of interest
+production_country <- "United States"
+year_of_interest <- 2020
+
+# Filter shows produced by selected country in selected year
+selected_shows <- shows_df %>% 
+  filter(Production.Country == production_country, 
+         year(Date.Added) == year_of_interest, 
+         Rating == "TV-MA" & grepl("TV Show", Content.Type))
+
+# Display selected shows
+if (nrow(selected_shows) > 0) {
+  print(paste("Selected shows produced by", production_country, "in", year_of_interest, "rated TV-MA and classified as TV Show:"))
+  print(selected_shows$Title)
+} else {
+  print(paste("No TV shows produced by", production_country, "in", year_of_interest, "rated TV-MA and classified as TV Show were found."))
+}
+
+```
+
+## 1.4 Display titles that have both "teen" and "high school" in the description. Display the title, release year, the IMDB score in ascending order of release year and descending order of the IMDB score.Only show the top 5 rows.
+
+```{r}
+# Select shows with "teen" and "high school" in the description
+selected_shows <- shows_df %>% 
+  filter(str_detect(tolower(Description), "teen") & str_detect(tolower(Description), "high school"))
+
+# Display titles, release year, and IMDB score, sorted by release year in ascending order and IMDB score in descending order
+top_5_shows <- selected_shows %>% 
+  select(Title, Release.Date, Imdb.Score) %>% 
+  arrange(Release.Date, desc(Imdb.Score)) %>% 
+  top_n(5)
+
+# Print top 5 shows
+print(top_5_shows)
+```
+
+## 1.5 Find the top three production countries with the highest number of TV shows that are designed to be "TV Show Suitable for General Audiences". For each country, display the number of shows and average IMDB score.
+
+```{r}
+# Select TV shows suitable for general audiences
+general_audience_shows <- shows_df %>% 
+  filter(Rating == "TV-G" & grepl("TV Show", Content.Type))
+
+# Group shows by production country
+country_groups <- general_audience_shows %>% 
+  group_by(Production.Country)
+
+# Summarize shows by count and average IMDB score
+country_summary <- country_groups %>% 
+  summarize(num_shows = n(), avg_imdb_score = mean(as.numeric(gsub("/10", "", Imdb.Score), na.rm = TRUE)))
+
+# Sort countries by number of shows and select top three
+top_countries <- country_summary %>% 
+  arrange(desc(num_shows)) %>% 
+  head(3)
+
+# Print results
+print("Top three production countries with the highest number of TV shows suitable for general audiences:")
+print(top_countries)
+
+```
+
+## 1.6 Draw boxplot to compare the distribution of the IMDB scores for movies produced after 2010 by United States and by Canada. What are the five values in each boxplot? Write a short paragraph (less than 100 words) to describe your insights.
+
+```{r}
+# Select movies produced after 2010 by the United States or Canada
+selected_movies <- shows_df %>% 
+  filter(Production.Country %in% c("United States", "Canada"), 
+         as.numeric(ifelse(Release.Date == "", 0, Release.Date)) > 2010, 
+         grepl("Movie", Content.Type))
+
+# Draw boxplot of IMDB scores for US and Canadian movies
+ggplot(selected_movies, aes(x = Production.Country, y = as.numeric(gsub("/10", "", Imdb.Score)))) +
+  geom_boxplot() +
+  ggtitle("Distribution of IMDB Scores for US and Canadian Movies Produced After 2010") +
+  ylab("IMDB Score")
+
+# Display five values in each boxplot
+by(selected_movies$Imdb.Score, selected_movies$Production.Country, 
+   FUN = function(x) {summary(as.numeric(gsub("/10", "", x)))})
+```
+
+**Answer: Based on the boxplot and summary statistics, we can see that the distribution of IMDB scores for Canadian movies produced after 2010 is slightly less spread out than that of US movies. The median IMDB score for Canadian movies is slightly higher than that of US movies, while the minimum and maximum scores are also slightly lower for Canadian movies. However, the interquartile range and the upper and lower quartiles are also USA have more than Canada. Overall, the difference in the distribution of IMDB scores between the two countries is relatively small, and it is possible that other factors such as genre, budget, or marketing may have a stronger influence on IMDB scores than the country of production.**
+
+## 1.7 To help a mother choose a good movie for her children who are less than 7 years old, you are required to: a) Propose a ranking with at least 2 criteria to rank the movies that best suit to their children (provide justification). b) Then write R code to find the top 5 movies based on your proposed ranking. (c) Write a short paragraph to discuss your insights and recommendations.
+
+Answer: a) To propose a ranking with at least 2 criteria to rank the movies that best suit to children less than 7 years old, we can consider the following criteria:
+
+Age-appropriateness: This criterion assesses whether a movie is suitable for children under 7 years of age based on its content, language, and themes. For example, movies with excessive violence, profanity, or sexual content may not be appropriate for young children.
+
+Educational value: This criterion assesses the educational value of a movie for young children. For example, movies that teach children about important values such as kindness, empathy, and teamwork, or introduce them to new concepts or cultures can be beneficial for their learning and development.
+
+b)  To find the top 5 movies based on this ranking, we can use the following R code:
+
+```{r}
+# Filter movies suitable for children less than 7 years old
+selected_movies <- shows_df %>%
+  filter(grepl("TV-Y7", Rating)) %>%
+  filter(grepl("Movie", Content.Type))
+
+# Rank movies based on age-appropriateness and educational value
+ranked_movies <- selected_movies %>%
+  mutate(age_rank = ifelse(grepl("TV-Y", Rating) | grepl("TV-G", Rating) | grepl("TV-Y7", Rating), 1, 0),
+         edu_rank = ifelse(grepl("Educational", Genres), 1, 0)) %>%
+  mutate(rank = age_rank + edu_rank) %>%
+  arrange(desc(rank), desc(as.numeric(gsub("/10", "", Imdb.Score)))) %>%
+  select(Title, Release.Date, Rating, Genres, Imdb.Score)
+
+# Display top 5 movies
+head(ranked_movies, 5)
+```
+
+c) Based on the proposed ranking and the top 5 movies, we can see that movies with high age-appropriateness and educational value tend to rank higher in the list. The top 5 movies include "A truthful Mother", "Arlo the Alligator Boy", "Buddy Thunderstruck: The Maybe Pile", "Rocko's Modern Life: Static Cling", and "ego DC Comics: Batman Be-Leaguered". These movies are rated "TV-Y7", and have educational themes such as teamwork, friendship, and creativity. Parents looking for movies suitable for children less than 7 years old can use this ranking to find movies that are not only entertaining but also age-appropriate and educational for their children.
+
+## 2.1 Load the data from the Data worksheet into an R dataframe. Rename the columns to remove the word “Year” in the column names. Use glimpse to show the information of the data frame.
+
+```{r}
+# Load the data from the Data worksheet into an R dataframe, skipping the first two rows
+library(readxl)
+
+production_df <- read_excel("Production.xlsx", sheet = "Data", skip = 2)
+
+# Rename the columns to remove the word "Year" in the column names
+colnames(production_df) <- str_replace_all(colnames(production_df), "Year", "")
+
+# Use glimpse to show the information of the data frame
+glimpse(production_df)
+
+```
+## 2.2 Transform the dataframe
+
+### a) Use pivot_longer to transform the dataframe into three columns, namely “Production Country / Maturity Type”, “Year”, and “Value”. Drop all rows having NA in Value. 
+
+```{r}
+# Use pivot_longer to transform the data
+# Use pivot_longer to transform the data
+production_df_transformed <- production_df %>%
+  pivot_longer(cols = c(" 2017"," 2018"," 2019", " 2020", " 2021"), names_to = "Year", values_to = "Value") %>%
+  drop_na(Value) # Drop rows with NA in Value column
+```
+
+### b) Split the first column into two columns and give meaningful column names to them. 
+
+```{r}
+library(tidyr)
+
+production_df <- production_df_transformed %>%
+  separate(`Production Country / Maturity Type`, 
+           into = c("Production Country", "Maturity Type"),
+           sep = " / ")
+
+```
+
+### c) Split column “Value” into two columns, namely “NumProducts” and “Score”. Remove the string “/10” in the Score column. Make sure they have correct data types
+
+```{r}
+production_df_transformed <- production_df %>%
+  separate(Value, into = c("NumProducts", "Score"), sep = " - ") %>%
+  mutate(Score = as.numeric(gsub("/10", "", Score)),
+         NumProducts = as.integer(NumProducts))
+
+glimpse(production_df_transformed)
+```
+### d) Display the number of columns and rows after transformation. 
+
+```{r}
+dim(production_df)
+```
+
+### e) Show the number of distinct countries and distinct years.
+
+```{r}
+# Number of distinct countries
+distinct_countries <- distinct(production_df, `Production Country`, .keep_all = TRUE)
+num_countries <- nrow(distinct_countries)
+cat("Number of distinct countries:", num_countries, "\n")
+
+# Number of distinct years
+distinct_years <- distinct(production_df, Year, .keep_all = TRUE)
+num_years <- nrow(distinct_years)
+cat("Number of distinct years:", num_years)
+
+```
+## 2.3. What are the countries having the average score on all maturity types in 2021 from 6.8 to 7.0?
+
+```{r}
+library(dplyr)
+
+production_df_transformed <- production_df_transformed %>%
+  mutate(Year = as.numeric(trimws(Year)))
+
+
+# Filter data for 2021
+df_2021 <- production_df_transformed %>% 
+  filter(Year == "2021")
+
+# Group data by country and calculate average score
+df_avg_score <- df_2021 %>%
+  group_by(`Production Country`) %>%
+  summarize(avg_score = mean(as.numeric(Score)))
+
+# Filter countries with average score between 6.8 and 7.0
+df_filtered <- df_avg_score %>%
+  filter(avg_score >= 6.8 & avg_score <= 7.0)
+
+# Display the countries
+df_filtered$`Production Country`
+
+
+```
+## 2.4. Load the data from the Continent worksheet. Rename the columns to "Country", "Continent". How many countries/areas in total and how many do not appear in the Data worksheet?
+
+```{r}
+
+# Load the data from the "Continent" worksheet
+continent_df <- read_excel("Production.xlsx", sheet = "Continent", skip = 2)
+
+# Rename the columns
+colnames(continent_df) <- c("Country or Area", "Continent")
+
+# Count the total number of countries/areas
+total_countries <- nrow(continent_df)
+
+# Count the number of countries/areas that do not appear in the "Data" worksheet
+missing_countries <- length(setdiff(continent_df$`Country or Area`, production_df$`Production Country`))
+
+# Print the results
+cat("Total number of countries/areas:", total_countries, "\n")
+cat("Number of countries/areas missing in Data worksheet:", missing_countries, "\n")
+```
+## 2.5 To help Netflix choose a Asian country to target in order to further grow their market, you are required to:
+a) propose a criterion to rank the Asian countries to support their decision making (with justification).
+b) Then write R code to find the top five countries based on your proposed ranking. 
+c) Draw a column/bar chart to compare these countries in terms of the measure you used for ranking. Order the result from the highest to the lowest value. 
+d) Write a short paragraph (less than 100 words) to describe your insights.
+
+**Answer: a) A potential criterion to rank Asian countries for Netflix to target could be the number of productions made in each country. This could indicate the level of interest in the region for the types of content that Netflix produces, as well as the potential for future growth in the market."**
+
+**b)  To find the top five countries based on the number of productions, we can use the production_df dataframe and filter for Asian countries, then group by country and count the number of non-NA values in the dataframe. We can then sort in descending order and select the top five countries.:**
+
+```{r}
+
+library(dplyr)
+
+# Filter for Asian countries
+asian_countries <- c("China", "India", "Japan", "South Korea")
+
+# Count number of productions for each country
+top_countries <- production_df %>% 
+  filter(`Production Country` %in% asian_countries) %>% 
+  group_by(`Production Country`) %>% 
+  summarise(num_productions = sum(!is.na(Value))) %>% 
+  arrange(desc(num_productions)) %>% 
+  slice_head(n = 5)
+
+top_countries
+
+
+```
+**c)To create a column/bar chart to compare these countries, we can use ggplot2. We can order the countries from highest to lowest number of productions to make it easier to compare.**
+
+```{r}
+library(ggplot2)
+
+# Create bar chart of top countries
+ggplot(top_countries, aes(x = reorder(`Production Country`, -num_productions), y = num_productions)) +
+  geom_col(fill = "blue", alpha = 0.5) +
+  labs(title = "Number of Productions by Top Asian Countries", x = "Country", y = "Number of Productions")
+
+```
+
+**d) From the analysis, we can see that India has the highest number of productions, followed by Japan and South Korea. China, despite being the most populous country in the region, only has a few productions listed in the dataset. This suggests that there may be an untapped market in China for Netflix to explore. Overall, this analysis suggests that India could be a good target for Netflix to further grow its market in Asia, as it has the highest number of productions and a large population.**
