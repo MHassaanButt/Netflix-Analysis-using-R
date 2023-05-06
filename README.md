@@ -1,6 +1,6 @@
 # Netflix Analysis using R
 
-This project involves analyzing the Netflix dataset using R programming language. The dataset consists of two CSV files: `show.csv` and `MaturityType.csv`. The `show.csv` file contains information on Netflix movies and TV shows, such as title, description, release date, rating, and more. The `MaturityType.csv` file contains the description of maturity type.
+This project involves analyzing the Netflix dataset using R programming language. The dataset consists of two CSV files: `show.csv` and `MaturityType.csv` and one xlsx file `Production.xlsx`. The `show.csv` file contains information on Netflix movies and TV shows, such as title, description, release date, rating, and more. The `MaturityType.csv` file contains the description of maturity type. `Production` contains contains information on the production of TV shows and movies across various countries and maturity types, for the years 2017-2021.
 
 The analysis involves answering several questions about the dataset, such as:
 
@@ -10,6 +10,7 @@ The analysis involves answering several questions about the dataset, such as:
 - Which production countries have the highest number of TV shows that are designed for "TV Show Suitable for General Audiences" and what are the average IMDB scores?
 - How to compare the distribution of IMDB scores for movies produced after 2010 by the United States and by Canada using boxplots?
 - Which are the top 5 movies suitable for children less than 7 years old based on age-appropriateness and educational value?
+- Identify the top five Asian countries for Netflix to target in order to further grow their market?
 
 The analysis is done using R programming language and several packages, such as `tidyverse`, `lubridate`, and `ggplot2`.
 
@@ -43,7 +44,6 @@ library(ggplot2)
 5. Run each code chunk in the Netflix.Rmd file to see the analysis results.
 
 ## Conclusion
-
 
 In conclusion, this project shows how R programming language can be used to analyze a dataset and answer several questions related to the dataset. The analysis includes data cleaning, data manipulation, and data visualization using various R packages. The code and results can be used as a starting point for further analysis or as a reference for similar projects.
 
